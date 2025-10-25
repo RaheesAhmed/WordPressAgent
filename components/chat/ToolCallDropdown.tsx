@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Search, Globe } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import ReactMarkdown from 'react-markdown';
 
 interface ToolCallDropdownProps {
   toolName: string;
@@ -22,22 +20,20 @@ export function ToolCallDropdown({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getToolIcon = () => {
-    // WordPress-specific icons
     if (toolName.startsWith('wordpress_')) {
-      return <span className="text-xs">🔧</span>;
+      return <span className="text-base">🔧</span>;
     }
     
     switch (toolName) {
       case 'web_search':
-        return <Search className="size-3" />;
+        return <Search className="size-4 text-blue-500" />;
       default:
-        return <Globe className="size-3" />;
+        return <Globe className="size-4 text-gray-500" />;
     }
   };
   
   const getToolDisplayName = () => {
     if (toolName.startsWith('wordpress_')) {
-      // Convert wordpress_get_plugins to "Get Plugins"
       return toolName
         .replace('wordpress_', '')
         .split('_')
@@ -52,214 +48,54 @@ export function ToolCallDropdown({
     return toolName;
   };
 
-  const formatToolArgs = () => {
-    if (toolName === 'web_search' && toolArgs.query) {
-      return `"${toolArgs.query}"`;
-    }
-    return JSON.stringify(toolArgs, null, 2);
-  };
-
-  const formatToolResult = () => {
-    if (!toolResult) return null;
-    
-    // Handle string results
-    if (typeof toolResult === 'string') {
-      try {
-        const parsed = JSON.parse(toolResult);
-        
-        // Handle direct array of search results
-        if (Array.isArray(parsed)) {
-          const searchResults = parsed.filter((item: any) => item.type === 'web_search_result');
-          if (searchResults.length > 0) {
-            return (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Found {searchResults.length} results:</p>
-                {searchResults.slice(0, 5).map((result: any, idx: number) => (
-                  <div key={idx} className="border-l-2 border-muted pl-3">
-                    <a
-                      href={result.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-blue-600 hover:underline block"
-                    >
-                      {result.title}
-                    </a>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {result.url}
-                    </p>
-                  </div>
-                ))}
-                {searchResults.length > 5 && (
-                  <p className="text-xs text-muted-foreground">
-                    ...and {searchResults.length - 5} more results
-                  </p>
-                )}
-              </div>
-            );
-          }
-        }
-        
-        // Handle nested results format
-        if (parsed.results && Array.isArray(parsed.results)) {
-          return (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Found {parsed.results.length} results:</p>
-              {parsed.results.slice(0, 5).map((result: any, idx: number) => (
-                <div key={idx} className="border-l-2 border-muted pl-3">
-                  <a
-                    href={result.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-blue-600 hover:underline block"
-                  >
-                    {result.title}
-                  </a>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {result.url}
-                  </p>
-                  {result.snippet && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {result.snippet}
-                    </p>
-                  )}
-                </div>
-              ))}
-              {parsed.results.length > 5 && (
-                <p className="text-xs text-muted-foreground">
-                  ...and {parsed.results.length - 5} more results
-                </p>
-              )}
-            </div>
-          );
-        }
-      } catch (error) {
-        // Fallback to raw text for invalid JSON
-      }
-
-      return (
-        <div className="text-xs">
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => <p className="mb-1 text-muted-foreground">{children}</p>,
-              code: ({ children }) => <code className="bg-muted px-1 rounded text-xs">{children}</code>,
-            }}
-          >
-            {toolResult.length > 300 ? `${toolResult.slice(0, 300)}...` : toolResult}
-          </ReactMarkdown>
-        </div>
-      );
-    }
-    
-    // Handle object/array results
-    if (typeof toolResult === 'object' && toolResult !== null) {
-      // Check if it's an array of search results
-      if (Array.isArray(toolResult)) {
-        const searchResults = (toolResult as any[]).filter((item: any) => item.type === 'web_search_result');
-        if (searchResults.length > 0) {
-          return (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Found {searchResults.length} results:</p>
-              {searchResults.slice(0, 5).map((result: any, idx: number) => (
-                <div key={idx} className="border-l-2 border-muted pl-3">
-                  <a
-                    href={result.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-medium text-blue-600 hover:underline block"
-                  >
-                    {result.title}
-                  </a>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {result.url}
-                  </p>
-                </div>
-              ))}
-              {searchResults.length > 5 && (
-                <p className="text-xs text-muted-foreground">
-                  ...and {searchResults.length - 5} more results
-                </p>
-              )}
-            </div>
-          );
-        }
-      }
-      
-      const resultString = JSON.stringify(toolResult, null, 2);
-      return (
-        <div className="text-xs">
-          <pre className="bg-muted/30 p-2 rounded text-xs whitespace-pre-wrap">
-            {resultString.length > 300 ? `${resultString.slice(0, 300)}...` : resultString}
-          </pre>
-        </div>
-      );
-    }
-    
-    // Fallback for any other type
-    return (
-      <div className="text-xs text-muted-foreground">
-        No result data available
-      </div>
-    );
-  };
-
   return (
-    <Card className="my-0.5  p-0 ">
-      <Button
-        variant="ghost"
-        size="sm"
+    <div className="my-1.5 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors overflow-hidden shadow-sm">
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full justify-start text-xs h-6 px-2 py-0.5 hover:bg-muted/50 rounded-none"
+        className="w-full px-3 py-2.5 flex items-center gap-2.5 hover:bg-muted/60 transition-colors"
       >
         <div className="flex items-center gap-2 flex-1">
-          {getToolIcon()}
-          <span className="font-medium">
+          <div className="shrink-0">
+            {getToolIcon()}
+          </div>
+          <span className="text-sm font-medium text-foreground">
             {getToolDisplayName()}
           </span>
           {isLoading && (
-            <div className="flex space-x-1 ml-auto">
-              <div
-                className="size-1 bg-muted-foreground rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              ></div>
-              <div
-                className="size-1 bg-muted-foreground rounded-full animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              ></div>
-              <div
-                className="size-1 bg-muted-foreground rounded-full animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              ></div>
-            </div>
+            <Loader2 className="size-3.5 animate-spin text-blue-500 ml-auto" />
           )}
-          <div className="ml-auto">
+          <div className={`ml-auto transition-transform ${isExpanded ? 'rotate-0' : ''}`}>
             {isExpanded ? (
-              <ChevronDown className="size-3" />
+              <ChevronDown className="size-4 text-muted-foreground" />
             ) : (
-              <ChevronRight className="size-3" />
+              <ChevronRight className="size-4 text-muted-foreground" />
             )}
           </div>
         </div>
-      </Button>
+      </button>
 
       {isExpanded && (
-        <div className="px-2 pb-2 border-l-2 border-muted ml-2">
-          <div className="space-y-2">
-            {toolResult && (
-              <div>
-                <div className="bg-muted/30 p-2 rounded text-xs max-h-48 overflow-y-auto">
-                  {formatToolResult()}
-                </div>
+        <div className="px-3 pb-3 border-t border-border/30">
+          <div className="mt-2">
+            {toolResult ? (
+              <div className="bg-card border border-border rounded-md p-3 max-h-96 overflow-y-auto">
+                <pre className="text-xs whitespace-pre-wrap font-mono text-foreground leading-relaxed">
+                  {toolResult}
+                </pre>
               </div>
-            )}
-
-            {isLoading && !toolResult && (
-              <div className="text-xs text-muted-foreground italic">
-                Searching...
+            ) : isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
+                <Loader2 className="size-4 animate-spin" />
+                <span>Processing...</span>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground py-2">
+                No result available
               </div>
             )}
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

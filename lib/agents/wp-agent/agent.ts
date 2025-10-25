@@ -61,7 +61,7 @@ export async function createWpAgent(config: WpAgentConfig = {}): Promise<any> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
   // Validate required API key
-  const anthropicKey = finalConfig.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
   
   if (!anthropicKey) {
     throw new Error(
@@ -77,9 +77,10 @@ export async function createWpAgent(config: WpAgentConfig = {}): Promise<any> {
     maxTokens: 64000,
     clientOptions: {
       defaultHeaders: {
-        'anthropic-beta': 'token-efficient-tools-2025-02-19'
-      }
-    }
+        "anthropic-beta": ["token-efficient-tools-2025-02-19",
+        "fine-grained-tool-streaming-2025-05-14"]
+      },
+    },   
   });
 
   // Get WordPress MCP tools using persistent client
@@ -247,25 +248,45 @@ export async function* streamWordPressOperations(
               // Filter out MCP tool results (they show in dropdown)
               const text = contentPart.text.trim();
               
+              // Skip empty content
+              if (!text) continue;
+              
               // Skip if it starts with emoji indicator (MCP tool output)
-              if (/^[🔌📄✅❌⚙️🎯💡⚠️🔧📊🔍🎨🔐💾🏷️👤📝]/.test(text)) {
+              if (/^[🔌📄✅❌⚙️🎯💡⚠️🔧📊🔍🎨🔐💾🏷️👤📝ℹ️]/.test(text)) {
                 continue;
               }
               
-              // Skip if it looks like JSON data (starts with { or [ and contains WordPress keys)
-              if ((text.startsWith('{') || text.startsWith('[')) &&
-                  (text.includes('"plugin') || text.includes('"posts') ||
-                   text.includes('"pages') || text.includes('"users') ||
-                   text.includes('"themes') || text.includes('"media'))) {
+              // Skip if it looks like JSON data (any line starting with { or [)
+              if (text.startsWith('{') || text.startsWith('[')) {
                 continue;
               }
               
-              // Skip if it contains "Retrieved X" pattern (MCP tool output)
-              if (/Retrieved \d+/.test(text)) {
+              // Skip if it contains WordPress-specific patterns (tool output)
+              const toolOutputPatterns = [
+                /Retrieved \d+/,
+                /Connected as .+ user to/,
+                /Site:/,
+                /^\{[\s\S]*"id"[\s\S]*"title"[\s\S]*\}$/, // JSON object
+                /^\[[\s\S]*\]$/, // JSON array
+                /"plugin[s]?":/,
+                /"post[s]?":/,
+                /"page[s]?":/,
+                /"user[s]?":/,
+                /"theme[s]?":/,
+                /"media":/,
+                /"name":/,
+                /"url":/,
+                /"status":/,
+                /"author":/,
+                /"content":/,
+              ];
+              
+              const isToolOutput = toolOutputPatterns.some(pattern => pattern.test(text));
+              if (isToolOutput) {
                 continue;
               }
               
-              // Only yield actual assistant content
+              // Only yield actual assistant conversational content
               if (text) {
                 yield {
                   type: 'token',

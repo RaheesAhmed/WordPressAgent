@@ -7,13 +7,10 @@ import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
 import { WelcomeScreen } from './WelcomeScreen';
 import { Sidebar } from './Sidebar';
-import { ArtifactContainer, type ArtifactData, type ArtifactVersion } from '@/components/artifacts/ArtifactContainer';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { saveChat, getChatByThreadId, generateChatTitle } from '@/lib/chat-storage';
-import { parseArtifactFromStream, createWorkflowArtifact, generateArtifactId } from '@/lib/artifacts/utils';
-import type { WorkflowArtifact, Artifact } from '@/lib/artifacts/types';
 import { getGuestMessageCount, incrementGuestMessageCount, resetGuestMessageCount, hasReachedGuestMessageLimit } from '@/lib/guest-limits';
 import { getWordPressCredentials } from '@/lib/wordpress-connection';
 
@@ -33,14 +30,22 @@ export interface ToolCall {
   isLoading?: boolean;
 }
 
+// Event-based message chunks for sequential rendering
+export interface MessageEvent {
+  type: 'text' | 'tool_call' | 'tool_result';
+  content?: string;
+  toolCall?: ToolCall;
+  timestamp: Date;
+}
+
 export interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
   toolCalls?: ToolCall[];
-  artifact?: ArtifactData;
   attachedFiles?: AttachedFile[];
+  events?: MessageEvent[]; // Sequential events for progressive rendering
 }
 
 export function ChatInterface() {
@@ -57,10 +62,6 @@ export function ChatInterface() {
     `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
   const [guestMessageCount, setGuestMessageCount] = useState(0);
-  
-  // Artifact state management
-  const [currentArtifact, setCurrentArtifact] = useState<ArtifactData | null>(null);
-  const [isArtifactVisible, setIsArtifactVisible] = useState(false);
 
   // Auth modal state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -147,10 +148,6 @@ export function ChatInterface() {
     setIsStreaming(false);
     setInputValue('');
     
-    // Reset artifact state
-    setCurrentArtifact(null);
-    setIsArtifactVisible(false);
-    
     // Generate new thread ID for new conversation
     const newThreadId = `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setThreadId(newThreadId);
@@ -196,29 +193,6 @@ export function ChatInterface() {
     }
     setIsLoading(false);
     setIsStreaming(false);
-  };
-
-  const handleArtifactClose = () => {
-    setIsArtifactVisible(false);
-    setCurrentArtifact(null);
-  };
-
-  const handleArtifactVersionChange = (versionId: string) => {
-    if (!currentArtifact) return;
-    
-    const version = currentArtifact.versions.find(v => v.id === versionId);
-    if (version) {
-      setCurrentArtifact({
-        ...currentArtifact,
-        currentVersion: version,
-        updatedAt: new Date()
-      });
-    }
-  };
-
-  const handleOpenArtifact = (artifact: ArtifactData) => {
-    setCurrentArtifact(artifact);
-    setIsArtifactVisible(true);
   };
 
   const handleLoginClick = () => {
@@ -290,8 +264,10 @@ export function ChatInterface() {
     const controller = new AbortController();
     setAbortController(controller);
 
-    const assistantMessageId = (Date.now() + 1).toString();
+    // Create ONE assistant message that will hold everything
+    const assistantMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     let assistantMessageCreated = false;
+    let accumulatedContent = '';
 
     try {
       // Get WordPress credentials from localStorage (if available)
@@ -321,7 +297,6 @@ export function ChatInterface() {
       }
 
       const decoder = new TextDecoder();
-      let accumulatedContent = '';
       let buffer = ''; // Buffer for incomplete JSON
 
       while (true) {
@@ -350,183 +325,153 @@ export function ChatInterface() {
               const eventData = JSON.parse(jsonStr);
               
               if (eventData.type === 'tool_call') {
-                // Create assistant message if not created, or update with tool call
+                // If we have accumulated text, add it as text event first
+                if (accumulatedContent.trim()) {
+                  const textEvent: MessageEvent = {
+                    type: 'text',
+                    content: accumulatedContent,
+                    timestamp: new Date()
+                  };
+                  
+                  if (!assistantMessageCreated) {
+                    const assistantMessage: Message = {
+                      id: assistantMessageId,
+                      content: '',
+                      role: 'assistant',
+                      timestamp: new Date(),
+                      events: [textEvent]
+                    };
+                    setMessages(prev => [...prev, assistantMessage]);
+                    assistantMessageCreated = true;
+                  } else {
+                    setMessages(prev => prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, events: [...(msg.events || []), textEvent] }
+                        : msg
+                    ));
+                  }
+                  accumulatedContent = '';
+                }
+                
+                // Add tool call event
+                const toolCallEvent: MessageEvent = {
+                  type: 'tool_call',
+                  toolCall: {
+                    id: eventData.id,
+                    name: eventData.name,
+                    args: eventData.args,
+                    isLoading: true
+                  },
+                  timestamp: new Date()
+                };
+                
                 if (!assistantMessageCreated) {
                   const assistantMessage: Message = {
                     id: assistantMessageId,
                     content: '',
                     role: 'assistant',
                     timestamp: new Date(),
-                    toolCalls: [{
-                      id: eventData.id,
-                      name: eventData.name,
-                      args: eventData.args,
-                      isLoading: true
-                    }]
+                    events: [toolCallEvent]
                   };
                   setMessages(prev => [...prev, assistantMessage]);
-                  setIsLoading(false); // Hide loading dot
+                  setIsLoading(false);
                   assistantMessageCreated = true;
                 } else {
-                  // Add tool call to existing message
                   setMessages(prev => prev.map(msg =>
                     msg.id === assistantMessageId
-                      ? {
-                          ...msg,
-                          toolCalls: [...(msg.toolCalls || []), {
-                            id: eventData.id,
-                            name: eventData.name,
-                            args: eventData.args,
-                            isLoading: true
-                          }]
-                        }
+                      ? { ...msg, events: [...(msg.events || []), toolCallEvent] }
                       : msg
                   ));
                 }
+                
               } else if (eventData.type === 'tool_result') {
-                // Update tool call with result - match by tool name since we might not have exact ID match
+                // Update the matching tool call event with result
                 setMessages(prev => prev.map(msg =>
                   msg.id === assistantMessageId
                     ? {
                         ...msg,
-                        toolCalls: msg.toolCalls?.map(tool =>
-                          tool.name === eventData.name
-                            ? { ...tool, result: eventData.content, isLoading: false }
-                            : tool
-                        )
+                        events: (msg.events || []).map(evt => {
+                          if (evt.type === 'tool_call' &&
+                              evt.toolCall?.name === eventData.name &&
+                              evt.toolCall?.isLoading) {
+                            return {
+                              ...evt,
+                              toolCall: {
+                                ...evt.toolCall,
+                                result: eventData.content,
+                                isLoading: false
+                              }
+                            };
+                          }
+                          return evt;
+                        })
                       }
                     : msg
                 ));
+                
               } else if (eventData.type === 'token' && eventData.content) {
                 accumulatedContent += eventData.content;
                 
-                // Create assistant message on first token if no tool calls yet
+                // Create message if needed
                 if (!assistantMessageCreated) {
                   const assistantMessage: Message = {
                     id: assistantMessageId,
                     content: accumulatedContent,
                     role: 'assistant',
                     timestamp: new Date(),
+                    events: []
                   };
                   setMessages(prev => [...prev, assistantMessage]);
-                  setIsLoading(false); // Hide loading dot
+                  setIsLoading(false);
                   assistantMessageCreated = true;
                 } else {
-                  // Update existing assistant message content
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: accumulatedContent }
-                      : msg
-                  ));
-                }
-                
-                // Check if we have a complete artifact
-                if (accumulatedContent.includes('</artifact>')) {
-                  const parsedArtifact = parseArtifactFromStream(accumulatedContent);
-                  
-                  if (parsedArtifact && parsedArtifact.type && parsedArtifact.data) {
-                    // Show artifact container
-                    if (!isArtifactVisible) {
-                      setIsArtifactVisible(true);
-                    }
+                  // Update message - check if last event is text
+                  setMessages(prev => prev.map(msg => {
+                    if (msg.id !== assistantMessageId) return msg;
                     
-                    const artifactId = generateArtifactId();
-                    const now = new Date();
+                    const events = msg.events || [];
+                    const lastEvent = events[events.length - 1];
                     
-                    // Create version structure compatible with ArtifactContainer
-                    const version: ArtifactVersion = {
-                      id: generateArtifactId(),
-                      content: parsedArtifact.data,
-                      timestamp: now,
-                      title: parsedArtifact.title || 'Version 1'
-                    };
-                    
-                    // Create final artifact data structure
-                    const fullArtifactData: ArtifactData = {
-                      id: artifactId,
-                      type: parsedArtifact.type,
-                      title: parsedArtifact.title || 'Generated Workflow',
-                      description: `Generated ${parsedArtifact.type} artifact`,
-                      currentVersion: version,
-                      versions: [version],
-                      createdAt: now,
-                      updatedAt: now
-                    };
-                    
-                    // Remove artifact content from chat message and update with clean text
-                    const cleanContent = accumulatedContent
-                      .replace(/<artifact[\s\S]*?<\/artifact>/gi, '')
-                      .trim();
-                    
-                    // Update message with clean content and artifact data
-                    setMessages(prev => prev.map(msg =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: cleanContent, artifact: fullArtifactData }
-                        : msg
-                    ));
-                    
-                    // Update artifact container with final content
-                    setCurrentArtifact(fullArtifactData);
-                  }
-                } else {
-                  // For incomplete artifacts, show clean content without artifact tags
-                  let displayContent = accumulatedContent;
-                  if (accumulatedContent.includes('<artifact')) {
-                    // Remove partial artifact content from display
-                    displayContent = accumulatedContent
-                      .replace(/<artifact[\s\S]*$/gi, '')
-                      .trim();
-                      
-                    // Show artifact container with loading state when artifact is detected
-                    if (!isArtifactVisible) {
-                      setIsArtifactVisible(true);
-                      
-                      // Create loading artifact
-                      const artifactMatch = accumulatedContent.match(/<artifact(?:\s+type="([^"]+)")?(?:\s+title="([^"]+)")?/);
-                      const [, type, title] = artifactMatch || [];
-                      
-                      const loadingArtifact: ArtifactData = {
-                        id: generateArtifactId(),
-                        type: type as any || 'workflow',
-                        title: title || 'Generating Workflow...',
-                        description: 'Workflow is being generated, please wait...',
-                        currentVersion: {
-                          id: generateArtifactId(),
-                          content: {
-                            name: title || 'Loading...',
-                            nodes: [],
-                            connections: {},
-                            active: false
-                          },
-                          timestamp: new Date(),
-                          title: 'Loading...'
-                        },
-                        versions: [],
-                        createdAt: new Date(),
-                        updatedAt: new Date()
+                    // If last event is text, update it with new content
+                    if (lastEvent?.type === 'text') {
+                      return {
+                        ...msg,
+                        content: accumulatedContent,
+                        events: [
+                          ...events.slice(0, -1),
+                          { ...lastEvent, content: accumulatedContent }
+                        ]
                       };
-                      
-                      setCurrentArtifact(loadingArtifact);
+                    } else {
+                      // Last event is tool, create new text event
+                      return {
+                        ...msg,
+                        content: accumulatedContent,
+                        events: [
+                          ...events,
+                          {
+                            type: 'text' as const,
+                            content: accumulatedContent,
+                            timestamp: new Date()
+                          }
+                        ]
+                      };
                     }
-                  }
-                  
-                  // Update message with clean display content
-                  setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: displayContent }
-                      : msg
-                  ));
+                  }));
                 }
               } else if (eventData.type === 'complete') {
+                // Text is already being added progressively via token events
+                // Just finalize the stream
                 setIsLoading(false);
                 setIsStreaming(false);
                 setAbortController(null);
                 return;
               } else if (eventData.type === 'error') {
                 console.error('Streaming error:', eventData.content);
-                if (!assistantMessageCreated) {
+                const errorMsgId = assistantMessageId || `err_${Date.now()}`;
+                if (assistantMessageId === null) {
                   const errorMessage: Message = {
-                    id: assistantMessageId,
+                    id: errorMsgId,
                     content: `Error: ${eventData.content || 'Failed to generate workflow'}`,
                     role: 'assistant',
                     timestamp: new Date(),
@@ -534,7 +479,7 @@ export function ChatInterface() {
                   setMessages(prev => [...prev, errorMessage]);
                 } else {
                   setMessages(prev => prev.map(msg =>
-                    msg.id === assistantMessageId
+                    msg.id === errorMsgId
                       ? { ...msg, content: `Error: ${eventData.content || 'Failed to generate workflow'}` }
                       : msg
                   ));
@@ -554,26 +499,13 @@ export function ChatInterface() {
       // Handle abort signal
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Request was aborted by user');
-        if (!assistantMessageCreated) {
-          const abortMessage: Message = {
-            id: assistantMessageId,
-            content: '',
-            role: 'assistant',
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, abortMessage]);
-        } else {
-          setMessages(prev => prev.map(msg =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: msg.content  }
-              : msg
-          ));
-        }
+        // Don't add empty abort messages
       } else {
         console.error('Error generating workflow:', error);
-        if (!assistantMessageCreated) {
+        const errorMsgId = assistantMessageId || `err_${Date.now()}`;
+        if (assistantMessageId === null) {
           const errorMessage: Message = {
-            id: assistantMessageId,
+            id: errorMsgId,
             content: 'Sorry, I encountered an error while generating your workflow. Please check the server logs and ensure your API key is configured correctly.',
             role: 'assistant',
             timestamp: new Date(),
@@ -581,7 +513,7 @@ export function ChatInterface() {
           setMessages(prev => [...prev, errorMessage]);
         } else {
           setMessages(prev => prev.map(msg =>
-            msg.id === assistantMessageId
+            msg.id === errorMsgId
               ? { ...msg, content: 'Sorry, I encountered an error while generating your workflow. Please check the server logs and ensure your API key is configured correctly.' }
               : msg
           ));
@@ -635,7 +567,7 @@ export function ChatInterface() {
         {/* Chat Content */}
         <div className="flex flex-1 overflow-hidden">
           {/* Chat Area */}
-          <div className={`flex flex-col ${isArtifactVisible ? 'w-2/5' : 'w-full'} overflow-hidden transition-all duration-300`}>
+          <div className="flex flex-col w-full overflow-hidden">
           {!hasMessages ? (
             /* Welcome Screen with Centered Input */
             <div className="flex flex-col items-center justify-center h-full px-4">
@@ -686,7 +618,6 @@ export function ChatInterface() {
                 <ChatMessages
                   messages={messages}
                   isLoading={isLoading}
-                  onOpenArtifact={handleOpenArtifact}
                 />
               </div>
               <div className="backdrop-blur-md bg-background/80 p-4 shrink-0">
@@ -705,33 +636,8 @@ export function ChatInterface() {
             </>
           )}
         </div>
-        
-        {/* Desktop Artifact Container */}
-        {isArtifactVisible && (
-          <div className="hidden md:flex w-3/5 border-l border-border flex-col">
-            <ArtifactContainer
-              artifact={currentArtifact}
-              isVisible={isArtifactVisible}
-              onClose={handleArtifactClose}
-              onVersionChange={handleArtifactVersionChange}
-              className="w-full h-full"
-            />
-          </div>
-        )}
         </div>
       </div>
-      
-      {/* Mobile Artifact Overlay */}
-      {isArtifactVisible && (
-        <div className="fixed inset-0 z-50 bg-background md:hidden">
-          <ArtifactContainer
-            artifact={currentArtifact}
-            isVisible={isArtifactVisible}
-            onClose={handleArtifactClose}
-            onVersionChange={handleArtifactVersionChange}
-          />
-        </div>
-      )}
 
       {/* Auth Modal */}
       <AuthModal

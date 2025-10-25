@@ -1,22 +1,21 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { User, Copy, ThumbsUp, ThumbsDown, Eye, FileText, Image, File } from 'lucide-react';
+import { User, Copy, ThumbsUp, ThumbsDown, FileText, Image, File } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '../ui/button';
 import { LogoIcon } from '../ui/Logo';
 import { ToolCallDropdown } from './ToolCallDropdown';
 import type { Message } from './ChatInterface';
-import type { ArtifactData } from '@/components/artifacts/ArtifactContainer';
+
 
 interface ChatMessagesProps {
   messages: Message[];
   isLoading: boolean;
-  onOpenArtifact?: (artifact: ArtifactData) => void;
 }
 
-export function ChatMessages({ messages, isLoading, onOpenArtifact }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -80,23 +79,66 @@ export function ChatMessages({ messages, isLoading, onOpenArtifact }: ChatMessag
                 </div>
               )}
 
-              {/* Tool Calls */}
-              {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
-                <div className="w-full mb-2">
-                  {message.toolCalls.map((toolCall) => (
-                    <ToolCallDropdown
-                      key={toolCall.id}
-                      toolName={toolCall.name}
-                      toolArgs={toolCall.args}
-                      toolResult={toolCall.result}
-                      isLoading={toolCall.isLoading}
-                    />
+              {/* Sequential Events Rendering (tool calls inline with text) */}
+              {message.role === 'assistant' && message.events && message.events.length > 0 ? (
+                <div className="w-full space-y-2">
+                  {message.events.map((event, idx) => (
+                    <div key={`event-${idx}`}>
+                      {event.type === 'text' && event.content && (
+                        <div className="glass px-4 py-3 rounded-2xl">
+                          <div className="text-sm leading-6">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                hr: () => null,
+                                h1: ({ children }) => <h1 className="text-lg font-semibold mb-2">{children}</h1>,
+                                h2: ({ children }) => <h2 className="text-base font-semibold mb-2">{children}</h2>,
+                                h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                                li: ({ children }) => <li className="text-sm">{children}</li>,
+                                code: ({ children, ...props}) => (
+                                  <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono" {...props}>
+                                    {children}
+                                  </code>
+                                ),
+                                pre: ({ children }) => (
+                                  <pre className="bg-muted p-3 rounded-lg text-xs font-mono overflow-x-auto mb-2 whitespace-pre-wrap">
+                                    {children}
+                                  </pre>
+                                ),
+                                blockquote: ({ children }) => (
+                                  <blockquote className="border-l-2 border-muted-foreground pl-3 italic mb-2">
+                                    {children}
+                                  </blockquote>
+                                ),
+                              }}
+                            >
+                              {event.content}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {event.type === 'tool_call' && event.toolCall && (
+                        <ToolCallDropdown
+                          toolName={event.toolCall.name}
+                          toolArgs={event.toolCall.args}
+                          toolResult={
+                            typeof event.toolCall.result === 'string'
+                              ? event.toolCall.result
+                              : event.toolCall.result
+                                ? JSON.stringify(event.toolCall.result, null, 2)
+                                : undefined
+                          }
+                          isLoading={event.toolCall.isLoading}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
-              )}
-
-              {/* Message Bubble */}
-              {message.content && (
+              ) : message.content && (
                 <div
                   className={`px-4 py-3 rounded-2xl ${
                     message.role === 'user'
@@ -154,18 +196,6 @@ export function ChatMessages({ messages, isLoading, onOpenArtifact }: ChatMessag
               {/* Message Actions */}
               {message.role === 'assistant' && (
                 <div className="flex items-center gap-1 mt-2">
-                  {/* Open Artifact Button */}
-                  {message.artifact && onOpenArtifact && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="size-8 p-1 hover:bg-muted rounded-lg"
-                      onClick={() => onOpenArtifact(message.artifact!)}
-                      title="Open Artifact"
-                    >
-                      <Eye className="size-3" />
-                    </Button>
-                  )}
                   <Button
                     variant="ghost"
                     size="sm"
