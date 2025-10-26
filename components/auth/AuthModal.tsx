@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { LoginForm } from './LoginForm';
 import { SignUpForm } from './SignUpForm';
@@ -14,6 +14,13 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(defaultMode);
+
+  // Sync internal mode state with defaultMode prop when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setMode(defaultMode);
+    }
+  }, [isOpen, defaultMode]);
 
   if (!isOpen) return null;
 
@@ -35,7 +42,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
       
       {/* Modal */}
       <div
-        className="relative bg-background border border-border rounded-xl shadow-2xl w-full max-w-md min-w-[350px] max-h-[90vh] overflow-y-auto"
+        className="relative bg-background border border-border rounded-xl shadow-2xl w-full max-w-md min-w-[350px] max-h-[95vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -49,7 +56,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         </Button>
 
         {/* Content */}
-        <div className="p-6 pt-12">
+        <div className="flex-1 overflow-y-auto p-6 pt-12 scrollbar-hide">
           {mode === 'login' ? (
             <LoginForm
               onSwitchToSignup={handleSwitchMode}
