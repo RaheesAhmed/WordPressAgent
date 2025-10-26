@@ -245,7 +245,7 @@ export function Sidebar({ onNewChat, onChatSelect, currentThreadId, user }: Side
                       className="size-8 rounded-full object-cover border border-sidebar-border"
                     />
                   ) : (
-                    <div className="size-8 rounded-full bg-gradient-to-br from-[#FF6D6B] to-[#FF5A57] flex items-center justify-center text-white font-medium text-sm">
+                    <div className="size-8 rounded-full bg-gradient-to-br from-[#21759B] to-[#1a5f7e] flex items-center justify-center text-white font-medium text-sm">
                       {(user.email?.charAt(0) || 'U').toUpperCase()}
                     </div>
                   )}
@@ -274,7 +274,7 @@ export function Sidebar({ onNewChat, onChatSelect, currentThreadId, user }: Side
                         className="size-12 rounded-full object-cover border-2 border-sidebar-border"
                       />
                     ) : (
-                      <div className="size-12 rounded-full bg-gradient-to-br from-[#FF6D6B] to-[#FF5A57] flex items-center justify-center text-white font-medium text-lg">
+                      <div className="size-12 rounded-full bg-gradient-to-br from-[#21759B] to-[#1a5f7e] flex items-center justify-center text-white font-medium text-lg">
                         {(user.email?.charAt(0) || 'U').toUpperCase()}
                       </div>
                     )}
@@ -295,7 +295,7 @@ export function Sidebar({ onNewChat, onChatSelect, currentThreadId, user }: Side
                 {/* Account Info */}
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-3">
-                    <Crown className="size-4 text-[#FF6D6B]" />
+                    <Crown className="size-4 text-[#21759B]" />
                     <div>
                       <div className="text-sm font-medium text-foreground">Free Plan</div>
                       <div className="text-xs text-muted-foreground">10 credits remaining</div>

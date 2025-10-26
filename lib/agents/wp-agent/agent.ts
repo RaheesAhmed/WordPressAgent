@@ -60,12 +60,12 @@ async function getWordPressMCPTools(config: WpAgentConfig): Promise<any[]> {
 export async function createWpAgent(config: WpAgentConfig = {}): Promise<any> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
-  // Validate required API key
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  // Validate required API key: prioritize config, then env
+  const anthropicKey = finalConfig.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
   
   if (!anthropicKey) {
     throw new Error(
-      'Anthropic API key is required. Set ANTHROPIC_API_KEY environment variable or pass anthropicApiKey in config.'
+      'Anthropic API key is required. Please configure it in WordPress Settings or set ANTHROPIC_API_KEY environment variable.'
     );
   }
 
@@ -80,7 +80,7 @@ export async function createWpAgent(config: WpAgentConfig = {}): Promise<any> {
         "anthropic-beta": ["token-efficient-tools-2025-02-19",
         "fine-grained-tool-streaming-2025-05-14"]
       },
-    },   
+    },
   });
 
   // Get WordPress MCP tools using persistent client

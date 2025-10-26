@@ -588,10 +588,10 @@ export function ChatInterface() {
                 {/* Example Prompt Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-3xl">
                   {[
-                    "Create a Slack notification workflow when GitHub issues are created",
-                    "Build an automated email sequence for new subscribers",
-                    "Set up data sync between Google Sheets and Airtable",
-                    "Monitor website changes and send Discord alerts"
+                    "Create 5 blog posts about AI and publish them with featured images",
+                    "Optimize my database and clear all caches for better performance",
+                    "Set up WooCommerce with 10 products in the Technology category",
+                    "Create a child theme and customize the header styling"
                   ].map((example, index) => (
                     <button
                       key={index}

@@ -27,6 +27,7 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
   const [url, setUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -37,10 +38,12 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
         setUrl(currentConnection.url);
         setUsername(currentConnection.username);
         setPassword(currentConnection.password);
+        setAnthropicApiKey(currentConnection.anthropicApiKey || '');
       } else {
         setUrl('');
         setUsername('');
         setPassword('');
+        setAnthropicApiKey('');
       }
     }
   }, [isOpen]);
@@ -48,6 +51,11 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
   const handleConnect = async () => {
     if (!url.trim() || !username.trim() || !password.trim()) {
       toast.error('Please enter URL, username, and application password');
+      return;
+    }
+
+    if (!anthropicApiKey.trim()) {
+      toast.error('Please enter Anthropic API key');
       return;
     }
 
@@ -65,6 +73,7 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
           url: cleanUrl,
           username: username.trim(),
           password: password.trim(),
+          anthropicApiKey: anthropicApiKey.trim(),
           connected: true,
           lastConnected: new Date(),
           siteName: result.siteName || 'WordPress Site'
@@ -94,6 +103,7 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
     setUrl('');
     setUsername('');
     setPassword('');
+    setAnthropicApiKey('');
     toast.success('Disconnected from WordPress');
     
     // Notify parent component about connection change
@@ -180,13 +190,29 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
             />
           </div>
 
+          <div>
+            <Label htmlFor="anthropicApiKey">Anthropic API Key</Label>
+            <Input
+              id="anthropicApiKey"
+              type="password"
+              placeholder="sk-ant-..."
+              value={anthropicApiKey}
+              onChange={(e) => setAnthropicApiKey(e.target.value)}
+              disabled={isConnecting}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Get your API key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-[#21759B] hover:underline">console.anthropic.com</a>
+            </p>
+          </div>
+
           <div className="flex gap-2 pt-2">
             {connection?.connected ? (
               <>
                 <Button
                   onClick={handleConnect}
-                  disabled={isConnecting || !url.trim() || !username.trim() || !password.trim()}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600"
+                  disabled={isConnecting || !url.trim() || !username.trim() || !password.trim() || !anthropicApiKey.trim()}
+                  className="flex-1 bg-[#21759B] hover:bg-[#1a5f7e]"
                 >
                   {isConnecting ? (
                     <>
@@ -208,8 +234,8 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
             ) : (
               <Button
                 onClick={handleConnect}
-                disabled={isConnecting || !url.trim() || !username.trim() || !password.trim()}
-                className="w-full bg-blue-500 hover:bg-blue-600"
+                disabled={isConnecting || !url.trim() || !username.trim() || !password.trim() || !anthropicApiKey.trim()}
+                className="w-full bg-[#21759B] hover:bg-[#1a5f7e]"
               >
                 {isConnecting ? (
                   <>
@@ -225,10 +251,17 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
         </div>
 
         {/* Help Text */}
-        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <p className="text-xs text-blue-700 dark:text-blue-400">
-            <strong>Need help?</strong> Go to your WordPress admin → Users → Profile → Application Passwords → Create new
-          </p>
+        <div className="mt-4 space-y-2">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-400">
+              <strong>WordPress:</strong> Admin → Users → Profile → Application Passwords → Create new
+            </p>
+          </div>
+          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <p className="text-xs text-purple-700 dark:text-purple-400">
+              <strong>Anthropic:</strong> Get API key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="underline">console.anthropic.com</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

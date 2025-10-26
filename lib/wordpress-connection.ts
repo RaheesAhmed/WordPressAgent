@@ -7,6 +7,7 @@ export interface WordPressConnection {
   url: string;
   username: string;
   password: string;
+  anthropicApiKey?: string;
   connected: boolean;
   lastConnected?: Date;
   siteName?: string;
@@ -139,6 +140,7 @@ export function getWordPressCredentials(): {
   url: string;
   username: string;
   password: string;
+  anthropicApiKey?: string;
 } | null {
   const connection = getWordPressConnection();
   if (!connection?.connected) return null;
@@ -147,5 +149,6 @@ export function getWordPressCredentials(): {
     url: connection.url,
     username: connection.username,
     password: connection.password,
+    anthropicApiKey: connection.anthropicApiKey,
   };
 }

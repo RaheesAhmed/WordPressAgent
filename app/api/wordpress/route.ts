@@ -12,11 +12,11 @@ export async function POST(request: NextRequest) {
     // Generate or use provided thread_id
     const threadId = thread_id || `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Check for API key
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    // Check for API key: prioritize client-provided, then env
+    const anthropicApiKey = wordpress_credentials?.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
     if (!anthropicApiKey) {
       return NextResponse.json({
-        error: 'ANTHROPIC_API_KEY not configured on server'
+        error: 'Anthropic API key not configured. Please add it in WordPress Settings.'
       }, { status: 500 });
     }
 

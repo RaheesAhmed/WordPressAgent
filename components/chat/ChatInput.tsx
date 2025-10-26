@@ -216,7 +216,7 @@ export function ChatInput({ onSendMessage, onStop, isLoading, isStreaming, hasMe
           {isStreaming ? (
             <Button
               onClick={handleStop}
-              className="shrink-0 size-10 p-2 rounded-xl transition-all duration-300 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:scale-110"
+              className="shrink-0 size-10 p-2 rounded-xl transition-all duration-300 bg-gradient-to-r from-[#21759B] to-[#1a5f7e] hover:from-[#1a5f7e] hover:to-[#134e68] text-white shadow-lg hover:scale-110"
             >
               <Square className="size-4" />
             </Button>
@@ -226,7 +226,7 @@ export function ChatInput({ onSendMessage, onStop, isLoading, isStreaming, hasMe
               disabled={(!message.trim() && attachedFiles.length === 0) || isLoading}
               className={`shrink-0 size-10 p-2 rounded-xl transition-all duration-300 ${
                 (message.trim() || attachedFiles.length > 0) && !isLoading
-                  ? 'bg-gradient-to-r from-[#FF6D6B] to-[#FF5A57] hover:from-[#FF5A57] hover:to-[#FF4F4C] text-white shadow-lg hover:scale-110'
+                  ? 'bg-gradient-to-r from-[#21759B] to-[#1a5f7e] hover:from-[#1a5f7e] hover:to-[#134e68] text-white shadow-lg hover:scale-110'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
@@ -251,8 +251,8 @@ export function ChatInput({ onSendMessage, onStop, isLoading, isStreaming, hasMe
             {/* Message Limit Indicator for Guest Users */}
             {!user && (
               <div className="flex items-center gap-2 text-xs">
-                <Crown className="size-3 text-[#FF6D6B]" />
-                <span className={userMessageCount >= 3 ? 'text-[#FF6D6B] font-medium' : ''}>
+                <Crown className="size-3 text-[#21759B]" />
+                <span className={userMessageCount >= 3 ? 'text-[#21759B] font-medium' : ''}>
                   {userMessageCount >= 3 ? 'Login to continue' : `${userMessageCount}/3 free messages`}
                 </span>
               </div>
