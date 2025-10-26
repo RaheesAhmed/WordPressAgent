@@ -55,7 +55,7 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
     }
 
     if (!anthropicApiKey.trim()) {
-      toast.error('Please enter Anthropic API key');
+      toast.error('Please enter your Anthropic API key');
       return;
     }
 
@@ -191,7 +191,7 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
           </div>
 
           <div>
-            <Label htmlFor="anthropicApiKey">Anthropic API Key</Label>
+            <Label htmlFor="anthropicApiKey">Anthropic API Key *</Label>
             <Input
               id="anthropicApiKey"
               type="password"
@@ -200,9 +200,10 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
               onChange={(e) => setAnthropicApiKey(e.target.value)}
               disabled={isConnecting}
               className="mt-1"
+              required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Get your API key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-[#21759B] hover:underline">console.anthropic.com</a>
+              Required: Get your API key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-[#21759B] hover:underline">console.anthropic.com</a>
             </p>
           </div>
 
@@ -254,12 +255,12 @@ export function WordPressSettings({ isOpen, onClose, onConnectionChange }: WordP
         <div className="mt-4 space-y-2">
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <p className="text-xs text-blue-700 dark:text-blue-400">
-              <strong>WordPress:</strong> Admin → Users → Profile → Application Passwords → Create new
+              <strong>WordPress Password:</strong> Admin → Users → Profile → Application Passwords → Create new
             </p>
           </div>
           <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
             <p className="text-xs text-purple-700 dark:text-purple-400">
-              <strong>Anthropic:</strong> Get API key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="underline">console.anthropic.com</a>
+              <strong>Anthropic API Key:</strong> Required. Get your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="underline">console.anthropic.com</a>
             </p>
           </div>
         </div>
