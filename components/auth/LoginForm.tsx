@@ -97,7 +97,7 @@ export function LoginForm({ onSwitchToSignup, onSuccess }: LoginFormProps) {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-10 bg-[#FF6D6B] hover:bg-[#FF5A57] text-white transition-colors"
+          className="w-full h-10 bg-gradient-to-r from-[#21759B] to-[#1a5f7e] hover:from-[#1a5f7e] hover:to-[#134e68] text-white transition-colors"
         >
           {isLoading ? (
             <>

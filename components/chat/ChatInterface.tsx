@@ -547,7 +547,7 @@ export function ChatInterface() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLoginClick}
-                className="gap-2 hover:bg-[#FF6D6B]/10 hover:text-[#FF6D6B] transition-colors"
+                className="gap-2 hover:bg-[#21759B]/10 hover:text-[#21759B] transition-colors"
               >
                 <LogIn className="size-4" />
                 Sign In
@@ -555,7 +555,7 @@ export function ChatInterface() {
               <Button
                 size="sm"
                 onClick={handleSignUpClick}
-                className="gap-2 bg-[#FF6D6B] hover:bg-[#FF5A57] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="gap-2 bg-gradient-to-r from-[#21759B] to-[#1a5f7e] hover:from-[#1a5f7e] hover:to-[#134e68] text-white shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <UserPlus className="size-4" />
                 Sign Up
