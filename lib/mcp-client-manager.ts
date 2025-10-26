@@ -99,21 +99,22 @@ class MCPClientManager {
     console.log('🔧 Creating new MCP client...');
     console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
     console.log('WordPress URL:', config.wordpressUrl);
+    console.log('Node version:', process.version);
+    console.log('Working directory:', process.cwd());
     
     try {
-      // Use direct node command for better Vercel compatibility
+      // Use npx consistently - it works better on Vercel when package is in dependencies
       const client = new MultiServerMCPClient({
         mcpServers: {
           wordpress: {
-            command: process.env.VERCEL ? "node" : "npx",
-            args: process.env.VERCEL
-              ? ["node_modules/wpmcp/dist/index.js"]
-              : ["-y", "wpmcp@3.0.0"],
+            command: "npx",
+            args: ["--yes", "wpmcp@3.0.0"],
             env: {
               WORDPRESS_URL: config.wordpressUrl,
               WORDPRESS_USERNAME: config.wordpressUsername,
               WORDPRESS_PASSWORD: config.wordpressPassword,
               NODE_ENV: process.env.NODE_ENV || 'production',
+              ...(process.env.PATH && { PATH: process.env.PATH }),
             },
             transport: "stdio",
           },
@@ -141,11 +142,26 @@ class MCPClientManager {
 
       // Initialize client if needed
       console.log('🔄 Initializing MCP client for tools...');
-      const client = await this.initialize(config);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('MCP client initialization timeout (30s)')), 30000);
+      });
+      
+      const client = await Promise.race([
+        this.initialize(config),
+        timeoutPromise
+      ]);
       
       // Get and cache tools
       console.log('🔄 Fetching MCP tools from client...');
-      this.tools = await client.getTools();
+      
+      const toolsPromise = new Promise<any[]>((resolve, reject) => {
+        setTimeout(() => reject(new Error('Tools fetch timeout (15s)')), 15000);
+        client.getTools().then(resolve).catch(reject);
+      });
+      
+      this.tools = await toolsPromise;
       console.log(`✅ Loaded ${this.tools.length} MCP tools`);
       
       if (this.tools.length === 0) {
@@ -156,6 +172,8 @@ class MCPClientManager {
     } catch (error) {
       console.error('❌ Error getting MCP tools:', error);
       console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('If on Vercel, ensure maxDuration is set to 60s in vercel.json');
+      
       throw new Error(`Failed to get MCP tools: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
