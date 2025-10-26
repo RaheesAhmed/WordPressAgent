@@ -97,44 +97,67 @@ class MCPClientManager {
    */
   private async createClient(config: MCPClientConfig): Promise<MultiServerMCPClient> {
     console.log('🔧 Creating new MCP client...');
+    console.log('Environment:', process.env.VERCEL ? 'Vercel' : 'Local');
+    console.log('WordPress URL:', config.wordpressUrl);
     
-    const client = new MultiServerMCPClient({
-      mcpServers: {
-        wordpress: {
-          command: "npx",
-          args: ["-y", "wpmcp@3.0.0"],
-          env: {
-            WORDPRESS_URL: config.wordpressUrl,
-            WORDPRESS_USERNAME: config.wordpressUsername,
-            WORDPRESS_PASSWORD: config.wordpressPassword,
+    try {
+      // Use direct node command for better Vercel compatibility
+      const client = new MultiServerMCPClient({
+        mcpServers: {
+          wordpress: {
+            command: process.env.VERCEL ? "node" : "npx",
+            args: process.env.VERCEL
+              ? ["node_modules/wpmcp/dist/index.js"]
+              : ["-y", "wpmcp@3.0.0"],
+            env: {
+              WORDPRESS_URL: config.wordpressUrl,
+              WORDPRESS_USERNAME: config.wordpressUsername,
+              WORDPRESS_PASSWORD: config.wordpressPassword,
+              NODE_ENV: process.env.NODE_ENV || 'production',
+            },
+            transport: "stdio",
           },
-          transport: "stdio",
         },
-      },
-    });
+      });
 
-    return client;
+      console.log('✅ MCP client configuration created');
+      return client;
+    } catch (error) {
+      console.error('❌ Error creating MCP client:', error);
+      throw new Error(`Failed to create MCP client: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * Get tools from MCP client (cached)
    */
   async getTools(config: MCPClientConfig): Promise<any[]> {
-    // If tools are cached and config hasn't changed, return cached tools
-    if (this.tools && !this.hasConfigChanged(config)) {
-      console.log('📦 Using cached MCP tools');
-      return this.tools;
-    }
+    try {
+      // If tools are cached and config hasn't changed, return cached tools
+      if (this.tools && !this.hasConfigChanged(config)) {
+        console.log('📦 Using cached MCP tools');
+        return this.tools;
+      }
 
-    // Initialize client if needed
-    const client = await this.initialize(config);
-    
-    // Get and cache tools
-    console.log('🔄 Fetching MCP tools...');
-    this.tools = await client.getTools();
-    console.log(`✅ Loaded ${this.tools.length} MCP tools`);
-    
-    return this.tools;
+      // Initialize client if needed
+      console.log('🔄 Initializing MCP client for tools...');
+      const client = await this.initialize(config);
+      
+      // Get and cache tools
+      console.log('🔄 Fetching MCP tools from client...');
+      this.tools = await client.getTools();
+      console.log(`✅ Loaded ${this.tools.length} MCP tools`);
+      
+      if (this.tools.length === 0) {
+        console.warn('⚠️ Warning: No tools loaded from MCP client');
+      }
+      
+      return this.tools;
+    } catch (error) {
+      console.error('❌ Error getting MCP tools:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      throw new Error(`Failed to get MCP tools: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
