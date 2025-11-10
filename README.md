@@ -204,7 +204,7 @@ Create a `.env.local` file:
 
 ```env
 # OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPHIC_API_KEY=your_key_here
 
 # WordPress Configuration
 WORDPRESS_URL=https://your-site.com
