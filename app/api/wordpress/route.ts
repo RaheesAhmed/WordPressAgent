@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { streamWordPressOperations } from '@/lib/agents/wp-agent';
 
-// Configure Vercel function settings
-export const maxDuration = 60; // 60 seconds for Pro plan (10s for Hobby)
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {

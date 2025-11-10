@@ -14,6 +14,18 @@
 
 ---
 
+## 🎥 Demo Video
+
+<div align="center">
+  <video width="100%" controls>
+    <source src="./assests/Wordpress Agnet.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+  <p><em>Watch wpAgent in action - managing WordPress sites through natural language</em></p>
+</div>
+
+---
+
 ## 🌟 What is wpAgent?
 
 **wpAgent** is an intelligent AI assistant that gives you complete control over WordPress sites through natural language conversations. Just describe what you want to do, and wpAgent handles all the technical complexity - from content management to database operations, theme customization to WooCommerce management.
