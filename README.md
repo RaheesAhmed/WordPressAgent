@@ -17,11 +17,15 @@
 ## 🎥 Demo Video
 
 <div align="center">
-  <video width="100%" controls>
-    <source src="./assests/Wordpress Agnet.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-  <p><em>Watch wpAgent in action - managing WordPress sites through natural language</em></p>
+  <a href="https://youtu.be/1ABgDxY1LR8" target="_blank">
+    <img src="https://img.youtube.com/vi/1ABgDxY1LR8/maxresdefault.jpg" alt="wpAgent Demo Video" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+  </a>
+  <p><em>👆 Click to watch wpAgent in action - managing WordPress sites through natural language</em></p>
+  <p>
+    <a href="https://youtu.be/1ABgDxY1LR8" target="_blank">
+      <img src="https://img.shields.io/badge/▶️_Watch_on-YouTube-red?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch on YouTube">
+    </a>
+  </p>
 </div>
 
 ---
@@ -204,7 +208,7 @@ Create a `.env.local` file:
 
 ```env
 # OpenAI Configuration
-ANTHROPHIC_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
 
 # WordPress Configuration
 WORDPRESS_URL=https://your-site.com
